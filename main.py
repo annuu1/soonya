@@ -269,7 +269,6 @@ class MainFrame(ctk.CTkScrollableFrame):
 
         algo_page.mainloop()
 
-
 class TradesPortfolioWindow(ctk.CTkToplevel):
     def __init__(self, master, order_manager):
         super().__init__(master)

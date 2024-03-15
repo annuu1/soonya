@@ -3,11 +3,18 @@ import time
 import threading
 import customtkinter as ctk
 import  tkinter.messagebox
+
+import pandas as pd
 from strategies import Strategy
 from const import kotak
 from telegram import Bot
 from neo_api_client import NeoAPI
 import yfinance as yf
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+import mplfinance as mpf
+
 
 from live_fetch import subscribe_to_live_data
 
@@ -18,7 +25,7 @@ class Algo(ctk.CTk):
         self.order_manager = order_manager
         self.soonya_api = soonya_api
 
-        self.geometry('900x250')
+        self.geometry('900x350')
         self.title('Algorithmic Trading Home')
 
         #Grid Configuration
@@ -157,6 +164,9 @@ class SideFrame(ctk.CTkFrame):
         self.update_ohlc = ctk.CTkButton(self, text="Update OHLC", command= self.update_ohlc)
         self.update_ohlc.grid(row = 8, column = 0)
 
+        self.show_chart_btn = ctk.CTkButton(self, text="Show Candlestick Chart", command=self.show_candlestick_chart)
+        self.show_chart_btn.grid(row=9, column=0)
+
     def update_ohlc(self):
         indice = self.indices.get()
         start = self.start_date.get()
@@ -182,7 +192,25 @@ class SideFrame(ctk.CTkFrame):
             }
             data.append(ohlc_data)
         return data
+    def show_candlestick_chart(self):
+        # Prepare data for candlestick chart
+        data = self.ohlc_converter.ohlcdf
 
+        df = pd.DataFrame(data)
+        df['Volume'] = 102
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df.set_index('timestamp', inplace=True)
+
+        # Create a new window for the candlestick chart
+        chart_window = ctk.CTk()
+        chart_window.title("Candlestick Chart")
+        chart_window.geometry("800x600")
+
+        # Plot the candlestick chart
+        mpf.plot(df, type='candle', mav=(5, 8, 13), style='charles', volume=True, hlines=dict(hlines=[47500, 46800],colors=['g','r'],linestyle='-.'))
+
+        # Display the window
+        chart_window.mainloop()
 class OHLCConverter:
     def __init__(self):
         self.ltp = None
