@@ -7,6 +7,7 @@ from strategies import Strategy
 from const import kotak
 from telegram import Bot
 from neo_api_client import NeoAPI
+import yfinance as yf
 
 from live_fetch import subscribe_to_live_data
 
@@ -17,7 +18,7 @@ class Algo(ctk.CTk):
         self.order_manager = order_manager
         self.soonya_api = soonya_api
 
-        self.geometry('700x250')
+        self.geometry('900x250')
         self.title('Algorithmic Trading Home')
 
         #Grid Configuration
@@ -29,6 +30,8 @@ class Algo(ctk.CTk):
         self.error_handler = ErrorHandler()
         self.telegram_notifier = TelegramNotifier(token='6948246303:AAGtwyniJ7t3Wk2_Gri6i8UmOJydKLKG6AU', chat_id='-1002039236264')
         
+        self.side_frame = SideFrame(self, self.ohlc_converter)
+
         # self.main_frame = MainFrame(self)
         self.header = Header(self, self.ohlc_converter, self.message_handler
                              , self.error_handler, self.telegram_notifier, self.order_manager
@@ -46,13 +49,13 @@ class Header(ctk.CTkFrame):
         self.client = client
         self.soonya_api = soonya_api
 
-        self.grid(row = 0, column = 0, columnspan = 4, sticky = 'nsew')
+        self.grid(row = 0, column = 2, columnspan = 4, sticky = 'nsew', padx = (2,2), pady = (0,0))
         
         #Grid Configuration
         self.columnconfigure((0,1,2,3), weight= 1)
 
         self.titleLabel = ctk.CTkLabel(self, text='Quant Quest', font=('Arial', 18))
-        self.titleLabel.grid(row=0, column=0, columnspan=2, pady=10)
+        self.titleLabel.grid(row=0, column=0, pady=10)
 
         # Create buttons
         self.orderButton = ctk.CTkButton(self, text='Login', command=self.login)
@@ -75,7 +78,6 @@ class Header(ctk.CTkFrame):
 
         self.put_token = ctk.CTkEntry(self)
         self.put_token.grid(row = 1, column = 3)
-
 
 
     def login(self):
@@ -120,6 +122,66 @@ class MainFrame(ctk.CTkFrame):
         self.put_token = ctk.CTkEntry(self)
         self.put_token.grid(row = 0, column = 3)
 
+class SideFrame(ctk.CTkFrame):
+    def __init__(self, master, ohlc_converter):
+        super().__init__(master)
+        self.ohlc_converter = ohlc_converter
+
+        self.grid(row=0, column=0, sticky="nsew", padx = (2,2), pady = (0,0))
+
+        self.indices_list = {'Select Instrument': "^NSEBANK", "NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK"
+                             , "MIDCAP" : "^NSEMDCP50", "FINNIFTY" : "NIFTY_FIN_SERVICE.NS"}
+
+        self.indices_var = ctk.StringVar(value='Select Instrument')
+        self.indices_values = ['Select Instrument', 'NIFTY 50', "BANK NIFTY", "MIDCAP", "FINNIFTY"]
+        self.indices = ctk.CTkComboBox(self, values=self.indices_values)
+        self.indices.grid(row=0, column=0)
+        self.indices.set('NIFTY 50')  # Set default value
+
+        ctk.CTkLabel(self, text="Algo Trading").grid(row=1, column=0)
+        ctk.CTkLabel(self, text="Start Date").grid(row=2, column=0)
+        self.start_date = ctk.CTkEntry(self)
+        self.start_date.grid(row=3, column=0, sticky = 'nsew')
+        self.start_date.insert(0, "2024-03-05")  # Set default value
+
+        ctk.CTkLabel(self, text="End Date").grid(row=4, column=0)
+        self.end_date = ctk.CTkEntry(self)
+        self.end_date.grid(row=5, column=0)
+        self.end_date.insert(0, "2024-03-09")  # Set default value
+
+        ctk.CTkLabel(self, text="Time Frame").grid(row=6, column=0)
+        self.time_frame = ctk.CTkComboBox(self, values=['1m', '5m', '10m', '15m', '30m', '1D', '1M'])
+        self.time_frame.grid(row=7, column=0)
+        self.time_frame.set('5m')  # Set default value
+
+        self.update_ohlc = ctk.CTkButton(self, text="Update OHLC", command= self.update_ohlc)
+        self.update_ohlc.grid(row = 8, column = 0)
+
+    def update_ohlc(self):
+        indice = self.indices.get()
+        start = self.start_date.get()
+        end = self.end_date.get()
+        time_frame = self.time_frame.get()
+        
+        data = []
+        df = yf.download(self.indices_list[indice], start, end, interval=time_frame)
+        data.extend(self.df_to_dict(df))
+        self.ohlc_converter.ohlcdf = data
+        print(f"updated the dataframe from {start} to {end} at {time_frame}")
+
+    def df_to_dict(self, df):
+        data = []
+        for index, row in df.iterrows():
+            timestamp = index.strftime('%d-%m-%Y %H:%M')
+            ohlc_data = {
+                'timestamp': timestamp,
+                'Open': row['Open'],
+                'High': row['High'],
+                'Low': row['Low'],
+                'Close': row['Close']
+            }
+            data.append(ohlc_data)
+        return data
 
 class OHLCConverter:
     def __init__(self):
@@ -175,7 +237,7 @@ class MessageHandler:
         self.ohlc_converter = ohlc_converter
 
     def on_message(self, message):
-        print(message)
+        # print(message)
         key = 'ltp'
         timestamp = int(time.time())
         dt = datetime.fromtimestamp(timestamp)

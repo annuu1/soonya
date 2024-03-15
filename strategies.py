@@ -36,7 +36,7 @@ class Strategy:
 
         # Calculate Super Trend using pandas_ta
         data.ta.supertrend(length=10, multiplier=1.5, append=True)
-        data.to_csv('dataframe.csv')
+        data.to_csv('dataframe1.csv')
 
     def execute_trade_logic(self, data, ltp):
 
@@ -96,7 +96,6 @@ class Strategy:
                     # message += f"📈 @{self.order.exit_premium} *Max Gone:* {self.order.dynamic_max_profit}\n"
                     # self.telegram_notifier.start_trade_exit(message)
                     time.sleep(5)
-            
             #Buy codition
             if data['ema_low'].iloc[-1] > data['ema_medium'].iloc[-1] and \
                     data['ema_low'].iloc[-1] > data['ema_long'].iloc[-1] and \
