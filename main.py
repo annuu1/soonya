@@ -321,13 +321,20 @@ class TradesPortfolioWindow(ctk.CTkToplevel):
             
             if trade.monitoring_flag:                   
                 square_off_button = ctk.CTkButton(self.orders_frame, text="Square Off", width=20,
-                                    command=lambda order_id=trade.order_id: self.square_off(order_id))
+                                    command=lambda order_id=trade.order_id
+                                    , instrument = trade.instrument: self.square_off(order_id, instrument))
                 square_off_button.grid(row=idx, column=6)
 
 
-    def square_off(self, order_id):
+    def square_off(self, order_id, instrument):
         # Call the square_off method of the order manager with the provided order_id
-        self.order_manager.square_off(order_id, "2540")
+        ex_seg = "NFO"
+        ltp = self.order_manager.api.get_quotes(ex_seg,
+                            self.order_manager.api.searchscrip(exchange=ex_seg,
+                                            searchtext=instrument)['values'][0]['token'])['lp']
+        print(self.order_manager.api.searchscrip(exchange=ex_seg,
+                                            searchtext=instrument)['values'][0]['token'])
+        self.order_manager.square_off(order_id, ltp)
 
 if __name__ == "__main__":
     app = App()
