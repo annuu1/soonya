@@ -5,6 +5,8 @@ import time
 from typing import Tuple
 import customtkinter as ctk
 import tkinter.messagebox as ttkmsg
+import sqlite3
+from sqlite3 import Error
 
 class Order:
     def __init__(self, instrument=None, qty=None, entry_price=None,
@@ -53,58 +55,90 @@ class Order:
     def start_monitoring(self):
         self.monitoring_flag = True
         
+class DatabaseManager:
+    def __init__(self, db_file):
+        self.conn = self.create_connection(db_file)
+        self.create_tables()
+
+    def create_connection(self, db_file):
+        conn = None
+        try:
+            conn = sqlite3.connect(db_file)
+            return conn
+        except Error as e:
+            print(e)
+        return conn
+
+    def create_tables(self):
+        orders_table = """CREATE TABLE IF NOT EXISTS orders (
+                            order_id INTEGER PRIMARY KEY,
+                            instrument TEXT NOT NULL,
+                            qty INTEGER NOT NULL,
+                            entry_price REAL NOT NULL,
+                            transaction_type TEXT NOT NULL,
+                            entry_timestamp TEXT NOT NULL,
+                            exit_price REAL,
+                            max_loss REAL,
+                            max_profit REAL,
+                            expiry TEXT,
+                            note TEXT
+                        );"""
+        portfolio_table = """CREATE TABLE IF NOT EXISTS portfolio (
+                                symbol TEXT PRIMARY KEY,
+                                quantity INTEGER NOT NULL
+                            );"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(orders_table)
+            cursor.execute(portfolio_table)
+        except Error as e:
+            print(e)
+
+    def insert_order(self, order):
+        sql = """INSERT INTO orders (instrument, qty, entry_price, transaction_type, entry_timestamp, note)
+                 VALUES (?, ?, ?, ?, ?, ?)"""
+        cursor = self.conn.cursor()
+        cursor.execute(sql, (order.instrument, order.qty, order.entry_price, order.transaction_type,
+                             order.entry_timestamp, order.note))
+        self.conn.commit()
+        print('order stored in DB')
+        return cursor.lastrowid
+
+    def update_order_exit_info(self, order_id, exit_price):
+        sql = """UPDATE orders SET exit_price = ? WHERE order_id = ?"""
+        cursor = self.conn.cursor()
+        cursor.execute(sql, (exit_price, order_id))
+        self.conn.commit()
+        print('The order updated')
+
+    def close_connection(self):
+        if self.conn:
+            self.conn.close()
 
 class OrderManager:
-    def __init__(self, api):
+    def __init__(self, api, db_file):
         self.api = api
+        self.db_manager = DatabaseManager(db_file)
         self.orders = []
-        self.portfolio = {'anu': 45, 'anu1': 45, 'anu2': 45, 'anu3': 45,'anu4': 45
-                          , 'anu14': 45, 'anu24': 45, 'anu34': 45}
-        
-    def save_data(self):
-        data = {
-            "orders": [order.__dict__ for order in self.orders],
-            "portfolio": self.portfolio
-        }
-        with open("trades_portfolio_data1.json", "w") as file:
-            json.dump(data, file)
+        self.portfolio = {}
 
     def place_order(self, instrument=None, entry_price=None, note=None, qty=None, transaction_type=None):
         new_order = Order(instrument=instrument, entry_timestamp=None, qty=qty, entry_price=entry_price,
-                      transaction_type=transaction_type, note=note)
-        
+                          transaction_type=transaction_type, note=note)
+        order_id = self.db_manager.insert_order(new_order)
+        new_order.order_id = order_id
         self.orders.append(new_order)
-        new_order.order_id = len(self.orders)
-
-        #start monitoring the ltps
-        # monitoring_thread = threading.Thread(target=self.monitor_trade, args=(new_order.order_id,))
-        # monitoring_thread.start()
-        self.save_data()
         return new_order
 
-    def square_off(self, order_id, exit_price = None):
-
+    def square_off(self, order_id, exit_price=None):
         order_to_square_off = next((order for order in self.orders if order.order_id == order_id), None)
         if order_to_square_off:
-
-            ltp = '48750'
-    
-            # Assuming a simple exit condition (e.g., exit at current market price)
             order_to_square_off.exit_price = exit_price
             order_to_square_off.exit_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            order_to_square_off.monitoring_flag = False
-            
-            self.save_data()
-            
-            # Calculate max_loss and max_profit
-            # order_to_square_off.calculate_max_loss_profit()
-            # Stop monitoring for this order
-            # order_to_square_off.stop_monitoring()
-            
+            self.db_manager.update_order_exit_info(order_id, exit_price)
             print(f"Square off Order {order_id} - Exit Price: {order_to_square_off.exit_price}")
         else:
             print(f"Order with order_id {order_id} not found.")
-
 
 class OrderWindow(ctk.CTk):
     def __init__(self, tsym = 'ACC-EQ', order_type = 'S', ex_seg = "NSE", order_manager = None):

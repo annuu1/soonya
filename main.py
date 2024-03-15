@@ -12,6 +12,7 @@ import tkinter as ttk
 from order_manager import Order, OrderManager as OM, OrderWindow
 from algo_bot import Algo
 
+database_file = 'soonya/database.db'
 
 class App(ctk.CTk):
     def __init__(self):
@@ -31,7 +32,7 @@ class App(ctk.CTk):
         self.menu = Menu(self)  # fg_color = "#011c0e"
                
         # Initialize OrderManager
-        self.order_manager = OM(self.api)
+        self.order_manager = OM(self.api, database_file)
         self.main_frame = MainFrame(self, self.menu, self.api, self.order_manager)
         self.header = Header(self, self.main_frame, fg_color="#fa3966")
         self.footer = Footer(self, self.main_frame, self.order_manager, fg_color="Green")
@@ -324,6 +325,7 @@ class TradesPortfolioWindow(ctk.CTkToplevel):
     def square_off(self, order_id):
         # Call the square_off method of the order manager with the provided order_id
         self.order_manager.square_off(order_id, "2540")
+
 if __name__ == "__main__":
     app = App()
     app.mainloop()
