@@ -332,8 +332,8 @@ class TradesPortfolioWindow(ctk.CTkToplevel):
         ltp = self.order_manager.api.get_quotes(ex_seg,
                             self.order_manager.api.searchscrip(exchange=ex_seg,
                                             searchtext=instrument)['values'][0]['token'])['lp']
-        print(self.order_manager.api.searchscrip(exchange=ex_seg,
-                                            searchtext=instrument)['values'][0]['token'])
+        # print(self.order_manager.api.searchscrip(exchange=ex_seg,
+        #                                     searchtext=instrument)['values'][0]['token'])
         self.order_manager.square_off(order_id, ltp)
 
 if __name__ == "__main__":

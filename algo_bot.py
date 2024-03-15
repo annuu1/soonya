@@ -200,6 +200,7 @@ class SideFrame(ctk.CTkFrame):
             }
             data.append(ohlc_data)
         return data
+    
     def show_candlestick_chart(self):
         # Prepare data for candlestick chart
         data = self.ohlc_converter.ohlcdf
@@ -209,16 +210,49 @@ class SideFrame(ctk.CTkFrame):
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df.set_index('timestamp', inplace=True)
 
-        # Create a new window for the candlestick chart
-        chart_window = ctk.CTk()
-        chart_window.title("Candlestick Chart")
-        chart_window.geometry("800x600")
+        # Create figure with subplots
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                            vertical_spacing=0.02, subplot_titles=('Candlestick Chart', 'Volume'))
 
-        # Plot the candlestick chart
-        mpf.plot(df, type='candle', mav=(5, 8, 13), style='charles', volume=True)
+        # Add candlestick chart
+        fig.add_trace(go.Candlestick(x=df.index,
+                                    open=df['Open'], high=df['High'],
+                                    low=df['Low'], close=df['Close'],
+                                    name='Candlestick'), row=1, col=1)
 
-        # Display the window
-        chart_window.mainloop()
+        # Add volume bar chart
+        fig.add_trace(go.Bar(x=df.index, y=df['Volume'],
+                            marker_color='gray', name='Volume'), row=2, col=1)
+
+        # Update layout
+        fig.update_layout(title='Interactive Candlestick Chart',
+                        xaxis_rangeslider_visible=False)
+
+        # Display the chart
+        fig.show()
+
+    def show_candlestick_chart_mpl(self):
+            # Prepare data for candlestick chart
+            data = self.ohlc_converter.ohlcdf
+
+            df = pd.DataFrame(data)
+            df['Volume'] = 102
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df.set_index('timestamp', inplace=True)
+
+            # Create a new window for the candlestick chart
+            chart_window = ctk.CTk()
+            chart_window.title("Candlestick Chart")
+            chart_window.geometry("800x600")
+
+            # Plot the candlestick chart
+            mpf.plot(df, type='candle', mav=(5, 8, 13), style='charles', volume=True)
+
+            # Display the window
+            chart_window.mainloop()
+
+
+
 class OHLCConverter:
     def __init__(self):
         self.ltp = None
