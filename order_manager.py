@@ -9,13 +9,17 @@ import sqlite3
 from sqlite3 import Error
 
 class Order:
-    def __init__(self, instrument=None, qty=None, entry_price=None,
+    def __init__(self, order_id = None, instrument=None, qty=None, entry_price=None,
                  transaction_type=None, entry_timestamp=None, exit_price = None, exit_premium = None,
-                max_loss = None, max_profit = None, expiry = None, note=None):
+                max_loss = None, max_profit = None, expiry = None, note=None, monitoring_flag = True):
         if entry_timestamp is None:
             entry_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        self.order_id = None
+        if order_id is None:
+            self.order_id = datetime.datetime.now().strftime('%y%m%d%H%M%S')
+        else:
+            self.order_id = order_id
+
         self.entry_timestamp = entry_timestamp
         self.instrument = instrument
         self.entry_price = entry_price
@@ -28,7 +32,7 @@ class Order:
         self.dynamic_max_loss = None
         self.dynamic_max_profit = None
         self.note = note
-        self.monitoring_flag = True
+        self.monitoring_flag = monitoring_flag
 
 
     def calculate_max_loss_profit(self):
@@ -54,7 +58,7 @@ class Order:
 
     def start_monitoring(self):
         self.monitoring_flag = True
-        
+
 class DatabaseManager:
     def __init__(self, db_file):
         self.conn = self.create_connection(db_file)
@@ -72,16 +76,19 @@ class DatabaseManager:
     def create_tables(self):
         orders_table = """CREATE TABLE IF NOT EXISTS orders (
                             order_id INTEGER PRIMARY KEY,
+                            entry_timestamp TEXT NOT NULL,
                             instrument TEXT NOT NULL,
                             qty INTEGER NOT NULL,
                             entry_price REAL NOT NULL,
                             transaction_type TEXT NOT NULL,
-                            entry_timestamp TEXT NOT NULL,
                             exit_price REAL,
                             max_loss REAL,
                             max_profit REAL,
-                            expiry TEXT,
-                            note TEXT
+                            exit_timestamp TEXT,
+                            dynamic_max_loss REAL,
+                            dynamic_max_profit REAL,
+                            note TEXT,
+                            monitoring_flag INTEGER
                         );"""
         portfolio_table = """CREATE TABLE IF NOT EXISTS portfolio (
                                 symbol TEXT PRIMARY KEY,
@@ -95,25 +102,69 @@ class DatabaseManager:
             print(e)
 
     def insert_order(self, order):
-        sql = """INSERT INTO orders (instrument, qty, entry_price, transaction_type, entry_timestamp, note)
-                 VALUES (?, ?, ?, ?, ?, ?)"""
+        sql = """INSERT INTO orders (order_id, entry_timestamp, instrument, qty, entry_price, transaction_type,
+                exit_price, max_loss, max_profit, exit_timestamp, dynamic_max_loss, dynamic_max_profit, note,
+                monitoring_flag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
         cursor = self.conn.cursor()
-        cursor.execute(sql, (order.instrument, order.qty, order.entry_price, order.transaction_type,
-                             order.entry_timestamp, order.note))
+        cursor.execute(sql, (order.order_id, order.entry_timestamp, order.instrument, order.qty, order.entry_price,
+                            order.transaction_type, order.exit_price, order.max_loss, order.max_profit,
+                            order.exit_timestamp, order.dynamic_max_loss, order.dynamic_max_profit, order.note,
+                            order.monitoring_flag))
         self.conn.commit()
         print('order stored in DB')
         return cursor.lastrowid
 
-    def update_order_exit_info(self, order_id, exit_price):
-        sql = """UPDATE orders SET exit_price = ? WHERE order_id = ?"""
-        cursor = self.conn.cursor()
-        cursor.execute(sql, (exit_price, order_id))
-        self.conn.commit()
-        print('The order updated')
+
+    def update_order_exit_info(self, order_id, exit_price, monitoring_flag = True):
+        if not monitoring_flag:
+            sql = """UPDATE orders SET exit_price = ? WHERE order_id = ?"""
+            set_monitoring_flag = """UPDATE orders SET monitoring_flag = ? WHERE order_id = ?"""
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (exit_price, order_id))
+            cursor.execute(set_monitoring_flag, (False, order_id))
+            self.conn.commit()
+            print('The order updated with monitoring flag')
+        else:
+            sql = """UPDATE orders SET exit_price = ? WHERE order_id = ?"""
+            cursor = self.conn.cursor()
+            cursor.execute(sql, (exit_price, order_id))
+            self.conn.commit()
+            print('The order updated')
 
     def close_connection(self):
         if self.conn:
             self.conn.close()
+
+    def get_portfolio_data(self):
+        sql = "SELECT * FROM portfolio"
+        cursor = self.conn.cursor()
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        portfolio_data = [(row[0], row[1]) for row in rows]
+        return portfolio_data
+
+    def get_trade_data(self):
+        sql = "SELECT * FROM orders"
+        cursor = self.conn.cursor()
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        trade_data = []
+        for row in rows:
+            trade = Order(order_id = row[0], instrument=row[2], qty=row[3], entry_price=row[4],
+                transaction_type=row[5], entry_timestamp=row[1], exit_price=row[6],
+                max_loss=row[7], max_profit=row[8], expiry=row[9], note=row[12], monitoring_flag = row[13])
+            trade_data.append(trade)
+        return trade_data
+        
+    def get_orders_with_monitoring_flag(self, monitoring_flag=True):
+        sql = "SELECT * FROM orders WHERE monitoring_flag = ?"
+        cursor = self.conn.cursor()
+        cursor.execute(sql, (monitoring_flag,))
+        rows = cursor.fetchall()
+        orders_data = []
+        for row in rows:
+            orders_data.append(row)
+        return orders_data
 
 class OrderManager:
     def __init__(self, api, db_file):
@@ -121,6 +172,21 @@ class OrderManager:
         self.db_manager = DatabaseManager(db_file)
         self.orders = []
         self.portfolio = {}
+        self.load_orders_with_monitoring_flag()
+
+    # self.load_orders_with_monitoring_flag() #loading the order not squared off
+    def load_orders_with_monitoring_flag(self):
+        orders_data = self.db_manager.get_orders_with_monitoring_flag(True)
+        for order_data in orders_data:
+            order = Order(
+                order_id=order_data[0],
+                instrument=order_data[1],
+                qty=order_data[2],
+                entry_price=order_data[3],
+                transaction_type=order_data[4],
+                entry_timestamp=order_data[5]
+            )
+            self.orders.append(order)
 
     def place_order(self, instrument=None, entry_price=None, note=None, qty=None, transaction_type=None):
         new_order = Order(instrument=instrument, entry_timestamp=None, qty=qty, entry_price=entry_price,
@@ -135,10 +201,19 @@ class OrderManager:
         if order_to_square_off:
             order_to_square_off.exit_price = exit_price
             order_to_square_off.exit_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.db_manager.update_order_exit_info(order_id, exit_price)
+            self.db_manager.update_order_exit_info(order_id, exit_price, monitoring_flag= False)
             print(f"Square off Order {order_id} - Exit Price: {order_to_square_off.exit_price}")
         else:
             print(f"Order with order_id {order_id} not found.")
+
+    def get_portfolio_data_from_database(self):
+        portfolio_data = self.db_manager.get_portfolio_data()
+        return portfolio_data
+
+    def get_trade_data_from_database(self):
+        trade_data = self.db_manager.get_trade_data()
+        return trade_data
+
 
 class OrderWindow(ctk.CTk):
     def __init__(self, tsym = 'ACC-EQ', order_type = 'S', ex_seg = "NSE", order_manager = None):

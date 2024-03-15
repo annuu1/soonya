@@ -1,19 +1,13 @@
-consumer_key = '3KLfDK7RR9DNfN4u_DSiybf2Mnoa'
-secretKey = 'G17tqyYCbrNaPQ6EmYNAg_4TMhka'
-login_password = 'P@ssword1234'
-mobileNumber = '+919898989819'
-MPIN = '123456'
-access_token = 'eyJ4NXQiOiJNbUprWWpVMlpETmpNelpqTURBM05UZ3pObUUxTm1NNU1qTXpNR1kyWm1OaFpHUTFNakE1TmciLCJraWQiOiJaalJqTUdRek9URmhPV1EwTm1WallXWTNZemRtWkdOa1pUUmpaVEUxTlRnMFkyWTBZVEUyTlRCaVlURTRNak5tWkRVeE5qZ3pPVGM0TWpGbFkyWXpOUV9SUzI1NiIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJVQVQwMTUiLCJhdXQiOiJBUFBMSUNBVElPTiIsImF1ZCI6IjNLTGZESzdSUjlETmZONHVfRFNpeWJmMk1ub2EiLCJuYmYiOjE3MDYyNjQwMDksImF6cCI6IjNLTGZESzdSUjlETmZONHVfRFNpeWJmMk1ub2EiLCJzY29wZSI6ImRlZmF1bHQiLCJpc3MiOiJodHRwczpcL1wvYXBpbS5rb3Rha3NlY3VyaXRpZXMub25saW5lOjQ0M1wvb2F1dGgyXC90b2tlbiIsImV4cCI6MzYwMDAwMTcwNjI2NDAwOSwiaWF0IjoxNzA2MjY0MDA5LCJqdGkiOiIyMWQxNmE4Zi1hZDBlLTQ1OWYtOTUzZi1lODgwMDdlNjJjZGYifQ.DSjuoNDCQwcf2lsdDZd2lqTsNbkbFSpVqzsbr5TeS-aiizxPMF4ddktDWZxK6gwnYwkt0kgJtCYObr6vrbtZuoAHtGvTDfslHP6eVJxARh0tiAvF_ZFuLBUnrfGhOXZVHsvxUBu3g0nZZqJ1w5EB-JRB5Pn2qu22LLboG-CAUZHdEcEA55xFjWEcOYUinNtebrWa_nsbRolU9wgcZi6G5sIpcv4CDlotOHqLdpoSvb_9l8tliR8BxfAoCIjvR5hyOwuUsALdoIrHnl-DPQ0-FUBP_fgkT6GiaH6v8i7m4bwc848f1vi3CSMYvcsWaHtqgpdBpqSP0OiNhL-YI9KwSQ'
-
+import pyotp
 
 # secretKey = 'kXb9SoaGI7hfGu58GmvDhhrWxuUa'
 # consumer_key = 'cus86mW4sL74SQcbWxrE9xJ9O9sa'
 # login_password = 'Naina@7557'
 # mobileNumber = '+917348393452'
 # MPIN = '991975'
+database_file = 'soonya/database.db'
 
 
-import pyotp
 #credentials
 finvasia = {"user"    : "FA210129",
 "pwd"     : "Naina@7557",

@@ -11,8 +11,7 @@ import tkinter.messagebox
 import tkinter as ttk
 from order_manager import Order, OrderManager as OM, OrderWindow
 from algo_bot import Algo
-
-database_file = 'soonya/database.db'
+from const import database_file
 
 class App(ctk.CTk):
     def __init__(self):
@@ -275,7 +274,7 @@ class TradesPortfolioWindow(ctk.CTkToplevel):
         super().__init__(master)
         self.order_manager = order_manager
         self.title("Trades and Portfolio")
-        self.geometry("600x400")
+        self.geometry("800x420")
 
         # Grid configuration
         self.columnconfigure((0, 1, 2, 3), weight=1)
@@ -290,9 +289,10 @@ class TradesPortfolioWindow(ctk.CTkToplevel):
         ctk.CTkLabel(self.portfolio_frame, text="Instrument").grid(row=1, column=0)
         ctk.CTkLabel(self.portfolio_frame, text="Quantity").grid(row=1, column=1)
 
-        # Create labels for displaying portfolio items
-        for idx, (token, quantity) in enumerate(self.order_manager.portfolio.items(), start=2):
-            ctk.CTkLabel(self.portfolio_frame, text=token).grid(row=idx, column=0)
+        # Display portfolio data from the database
+        portfolio_data = self.order_manager.get_portfolio_data_from_database()
+        for idx, (instrument, quantity) in enumerate(portfolio_data, start=2):
+            ctk.CTkLabel(self.portfolio_frame, text=instrument).grid(row=idx, column=0)
             ctk.CTkLabel(self.portfolio_frame, text=quantity).grid(row=idx, column=1)
 
         self.orders_frame = ctk.CTkScrollableFrame(self)
@@ -309,18 +309,21 @@ class TradesPortfolioWindow(ctk.CTkToplevel):
         ctk.CTkLabel(self.orders_frame, text="PnL").grid(row=1, column=4)
         ctk.CTkLabel(self.orders_frame, text="Time").grid(row=1, column=5)
 
-        # Create labels for displaying trade items
-        for idx, trade in enumerate(self.order_manager.orders, start=2):
+        # Display trade data from the database
+        trade_data = self.order_manager.get_trade_data_from_database()
+        for idx, trade in enumerate(trade_data, start=2):
             ctk.CTkLabel(self.orders_frame, text=trade.instrument).grid(row=idx, column=0)
             ctk.CTkLabel(self.orders_frame, text=trade.qty).grid(row=idx, column=1)
             ctk.CTkLabel(self.orders_frame, text=trade.entry_price).grid(row=idx, column=2)
             ctk.CTkLabel(self.orders_frame, text=trade.transaction_type).grid(row=idx, column=3)
+            ctk.CTkLabel(self.orders_frame, text=f"{trade.exit_price - trade.entry_price}" if trade.exit_price else "").grid(row=idx, column=4)  # Display exit price
             ctk.CTkLabel(self.orders_frame, text=trade.entry_timestamp).grid(row=idx, column=5)
             
             if trade.monitoring_flag:                   
                 square_off_button = ctk.CTkButton(self.orders_frame, text="Square Off", width=20,
                                     command=lambda order_id=trade.order_id: self.square_off(order_id))
                 square_off_button.grid(row=idx, column=6)
+
 
     def square_off(self, order_id):
         # Call the square_off method of the order manager with the provided order_id
