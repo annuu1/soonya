@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import time
 import threading
 import customtkinter as ctk
@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import mplfinance as mpf
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 from live_fetch import subscribe_to_live_data
@@ -146,15 +148,21 @@ class SideFrame(ctk.CTkFrame):
         self.indices.set('NIFTY 50')  # Set default value
 
         ctk.CTkLabel(self, text="Algo Trading").grid(row=1, column=0)
+
+        today = datetime.date.today()
+        # Calculate yesterday and tomorrow
+        yesterday = today - datetime.timedelta(days=1)
+        tomorrow = today + datetime.timedelta(days=1)
+
         ctk.CTkLabel(self, text="Start Date").grid(row=2, column=0)
         self.start_date = ctk.CTkEntry(self)
         self.start_date.grid(row=3, column=0, sticky = 'nsew')
-        self.start_date.insert(0, "2024-03-05")  # Set default value
+        self.start_date.insert(0, yesterday.strftime("%Y-%m-%d"))  # Set default value
 
         ctk.CTkLabel(self, text="End Date").grid(row=4, column=0)
         self.end_date = ctk.CTkEntry(self)
         self.end_date.grid(row=5, column=0)
-        self.end_date.insert(0, "2024-03-09")  # Set default value
+        self.end_date.insert(0, tomorrow.strftime("%Y-%m-%d"))  # Set default value
 
         ctk.CTkLabel(self, text="Time Frame").grid(row=6, column=0)
         self.time_frame = ctk.CTkComboBox(self, values=['1m', '5m', '10m', '15m', '30m', '1D', '1M'])
@@ -207,7 +215,7 @@ class SideFrame(ctk.CTkFrame):
         chart_window.geometry("800x600")
 
         # Plot the candlestick chart
-        mpf.plot(df, type='candle', mav=(5, 8, 13), style='charles', volume=True, hlines=dict(hlines=[47500, 46800],colors=['g','r'],linestyle='-.'))
+        mpf.plot(df, type='candle', mav=(5, 8, 13), style='charles', volume=True)
 
         # Display the window
         chart_window.mainloop()
