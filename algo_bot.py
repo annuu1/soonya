@@ -131,7 +131,7 @@ class MainFrame(ctk.CTkFrame):
         self.put_token = ctk.CTkEntry(self)
         self.put_token.grid(row = 0, column = 3)
 
-class SideFrame(ctk.CTkFrame):
+class SideFrame(ctk.CTkScrollableFrame):
     def __init__(self, master, ohlc_converter):
         super().__init__(master)
         self.ohlc_converter = ohlc_converter
@@ -175,6 +175,9 @@ class SideFrame(ctk.CTkFrame):
         self.show_chart_btn = ctk.CTkButton(self, text="Show Candlestick Chart", command=self.show_candlestick_chart)
         self.show_chart_btn.grid(row=9, column=0)
 
+        self.show_chart_btn = ctk.CTkButton(self, text="Run back test", command=self.run_backtest_thread)
+        self.show_chart_btn.grid(row=10, column=0)
+
     def update_ohlc(self):
         indice = self.indices.get()
         start = self.start_date.get()
@@ -186,6 +189,25 @@ class SideFrame(ctk.CTkFrame):
         data.extend(self.df_to_dict(df))
         self.ohlc_converter.ohlcdf = data
         print(f"updated the dataframe from {start} to {end} at {time_frame}")
+    
+    def run_backtest_thread(self):
+        run_test_thread = threading.Thread(target=self.run_backtest)
+        run_test_thread.start()
+
+    def run_backtest(self):
+        indice = self.indices.get()
+        start = self.start_date.get()
+        end = self.end_date.get()
+        time_frame = self.time_frame.get()
+        
+        data = []
+        df = yf.download(self.indices_list[indice], start, end, interval=time_frame)
+        data.extend(self.df_to_dict(df))
+        
+        for candle in data:
+            self.ohlc_converter.ohlcdf.append(candle)
+            self.ohlc_converter.ltp = candle['Open']
+            time.sleep(2)
 
     def df_to_dict(self, df):
         data = []
@@ -211,18 +233,15 @@ class SideFrame(ctk.CTkFrame):
         df.set_index('timestamp', inplace=True)
 
         # Create figure with subplots
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                            vertical_spacing=0.02, subplot_titles=('Candlestick Chart', 'Volume'))
+        fig = make_subplots(rows=1, cols=1, shared_xaxes=True, 
+                            vertical_spacing=0.02, subplot_titles=('Candlestick Chart'))
 
         # Add candlestick chart
         fig.add_trace(go.Candlestick(x=df.index,
                                     open=df['Open'], high=df['High'],
                                     low=df['Low'], close=df['Close'],
-                                    name='Candlestick'), row=1, col=1)
+                                    name='Candlestick'))
 
-        # Add volume bar chart
-        fig.add_trace(go.Bar(x=df.index, y=df['Volume'],
-                            marker_color='gray', name='Volume'), row=2, col=1)
 
         # Update layout
         fig.update_layout(title='Interactive Candlestick Chart',
@@ -250,8 +269,6 @@ class SideFrame(ctk.CTkFrame):
 
             # Display the window
             chart_window.mainloop()
-
-
 
 class OHLCConverter:
     def __init__(self):

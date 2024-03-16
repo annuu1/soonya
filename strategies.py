@@ -36,7 +36,7 @@ class Strategy:
 
         # Calculate Super Trend using pandas_ta
         data.ta.supertrend(length=10, multiplier=1.5, append=True)
-        data.to_csv('dataframe1.csv')
+        # data.to_csv('dataframe1.csv')
 
     def execute_trade_logic(self, data, ltp):
 
@@ -127,12 +127,12 @@ class Strategy:
                 self.trade_data['sl_price'] = min(data['High'].iloc[-1], self.trade_data['entry'] + 30)
                 self.trade_data['entry_timestamp'] = dt
                 self.order = self.order_manager.place_order(instrument='BANKNIFTY', entry_price=ltp,
-                                                            strategy='strategy1', qty=15, transaction_type='S',
+                                                            note='strategy1', qty=15, transaction_type='S',
                                                             )
                 
                 self.order1 = self.order_manager.place_order(instrument=self.put_tk
                             , entry_price=self.soonya_api.get_quotes(exchange ="NFO", token = self.put_tk)['lp'],
-                                                            strategy='strategy1', qty=15, transaction_type='S',
+                                                            note='strategy1', qty=15, transaction_type='S',
                                                             )
                 # self.telegram_notifier.start_trade_alert(signal="S", symbol='BANKNIFTY', ltp=int(ltp), premium=self.order.premium, sl=self.trade_data['sl_price'], entry_timestamp=dt)
 

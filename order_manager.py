@@ -169,6 +169,7 @@ class DatabaseManager:
 class OrderManager:
     def __init__(self, api, db_file):
         self.api = api
+        self.db_file = db_file
         self.db_manager = DatabaseManager(db_file)
         self.orders = []
         self.portfolio = {}
@@ -191,7 +192,7 @@ class OrderManager:
     def place_order(self, instrument=None, entry_price=None, note=None, qty=None, transaction_type=None):
         new_order = Order(instrument=instrument, entry_timestamp=None, qty=qty, entry_price=entry_price,
                           transaction_type=transaction_type, note=note)
-        order_id = self.db_manager.insert_order(new_order)
+        order_id = DatabaseManager(self.db_file).insert_order(new_order)
         new_order.order_id = order_id
         self.orders.append(new_order)
         return new_order
@@ -201,7 +202,7 @@ class OrderManager:
         if order_to_square_off:
             order_to_square_off.exit_price = exit_price
             order_to_square_off.exit_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.db_manager.update_order_exit_info(order_id, exit_price, monitoring_flag= False)
+            DatabaseManager(self.db_file).update_order_exit_info(order_id, exit_price, monitoring_flag= False)
             print(f"Square off Order {order_id} - Exit Price: {order_to_square_off.exit_price}")
         else:
             print(f"Order with order_id {order_id} not found.")
