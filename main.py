@@ -167,7 +167,7 @@ class MainFrame(ctk.CTkScrollableFrame):
         while True:
             # Get quotes
             nifty_data = self.api.get_quotes(exchange="NSE", token="26000")
-            banknifty_data = self.api.get_quotes(exchange="MCX", token="427070")
+            banknifty_data = self.api.get_quotes(exchange="NSE", token="26009")
             finnifty_data = self.api.get_quotes(exchange="NSE", token="26037")
             midcap_data = self.api.get_quotes(exchange="NSE", token="26074")
 
@@ -179,10 +179,13 @@ class MainFrame(ctk.CTkScrollableFrame):
 
     def update_label_data(self, label, data):
         if data:
-            open_price = data.get('o', '')
-            last_price = data.get('lp', '')
-            change_percentage = (float(last_price) - float(open_price))/float(open_price)
-            
+            open_price = float(data.get('o', ''))
+            last_price = float(data.get('lp', ''))
+            if open_price > 0:
+                change_percentage = (float(last_price) - float(open_price))/float(open_price)
+            else:
+                change_percentage = 0
+                print(change_percentage)
             label_text = f"{last_price} | "+"{:.2f}%".format(change_percentage * 100)
             label.configure(text=label_text, bg_color=self.get_color_from_change(change_percentage))
 
